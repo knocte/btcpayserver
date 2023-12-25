@@ -11,6 +11,7 @@ using BTCPayServer.Abstractions.Extensions;
 using BTCPayServer.Abstractions.Models;
 using BTCPayServer.Client;
 using BTCPayServer.Client.Models;
+using BTCPayServer.Controllers.Greenfield;
 using BTCPayServer.Data;
 using BTCPayServer.HostedServices;
 using BTCPayServer.Lightning;
@@ -127,8 +128,12 @@ namespace BTCPayServer.Controllers
             
             if (_pullPaymentHostedService.SupportsLNURL(blob))
             {
-                var url = Url.Action("GetLNURLForPullPayment", "UILNURL", new { cryptoCode = _networkProvider.DefaultNetwork.CryptoCode, pullPaymentId = vm.Id }, Request.Scheme, Request.Host.ToString());
+                var url = Url.Action(nameof(UILNURLController.GetLNURLForPullPayment), "UILNURL", new { cryptoCode = _networkProvider.DefaultNetwork.CryptoCode, pullPaymentId = vm.Id }, Request.Scheme, Request.Host.ToString());
                 vm.LnurlEndpoint = url != null ? new Uri(url) : null;
+                var registerUrl = Url.Action(nameof(GreenfieldPullPaymentController.RegisterBoltcard), "GreenfieldPullPayment", new { pullPaymentId = vm.Id }, Request.Scheme, Request.Host.ToString());
+                registerUrl = Uri.EscapeDataString(registerUrl);
+                vm.SetupDeepLink = $"boltcard://program?url={registerUrl}";
+                vm.ResetDeepLink = $"boltcard://reset?url={registerUrl}";
             }
 
             return View(nameof(ViewPullPayment), vm);
