@@ -12,6 +12,7 @@ using BTCPayServer.Client;
 using BTCPayServer.Client.Models;
 using BTCPayServer.Data;
 using BTCPayServer.HostedServices;
+using BTCPayServer.Logging;
 using BTCPayServer.NTag424;
 using BTCPayServer.Payments;
 using BTCPayServer.Security;
@@ -22,7 +23,9 @@ using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using NBitcoin.DataEncoders;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using MarkPayoutRequest = BTCPayServer.HostedServices.MarkPayoutRequest;
 
@@ -43,6 +46,7 @@ namespace BTCPayServer.Controllers.Greenfield
         private readonly IAuthorizationService _authorizationService;
         private readonly SettingsRepository _settingsRepository;
         private readonly BTCPayServerEnvironment _env;
+        private readonly Logs _logs;
 
         public GreenfieldPullPaymentController(PullPaymentHostedService pullPaymentService,
             LinkGenerator linkGenerator,
@@ -53,7 +57,7 @@ namespace BTCPayServer.Controllers.Greenfield
             BTCPayNetworkProvider btcPayNetworkProvider,
             IAuthorizationService authorizationService,
             SettingsRepository settingsRepository,
-            BTCPayServerEnvironment env)
+            BTCPayServerEnvironment env, Logs logs)
         {
             _pullPaymentService = pullPaymentService;
             _linkGenerator = linkGenerator;
@@ -65,6 +69,7 @@ namespace BTCPayServer.Controllers.Greenfield
             _authorizationService = authorizationService;
             _settingsRepository = settingsRepository;
             _env = env;
+            _logs = logs;
         }
 
         [HttpGet("~/api/v1/stores/{storeId}/pull-payments")]
@@ -207,6 +212,7 @@ namespace BTCPayServer.Controllers.Greenfield
             var pp = await _pullPaymentService.GetPullPayment(pullPaymentId, false);
             if (pp is null)
                 return PullPaymentNotFound();
+            _logs.PayServer.LogInformation(JsonConvert.SerializeObject(request, Formatting.Indented));
             if (request?.UID is null || request.UID.Length != 7)
             {
                 ModelState.AddModelError(nameof(request.UID), "The UID is required and should be 7 bytes");
